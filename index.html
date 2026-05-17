@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件下载中心</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .download-section {
+            margin-bottom: 30px;
+        }
+        .file-list {
+            list-style: none;
+            padding: 0;
+        }
+        .search-box {
+            width: 100%;
+            max-width: 480px;
+            padding: 10px 14px;
+            margin-bottom: 12px;
+            border: 1px solid #cfd8dc;
+            border-radius: 6px;
+            font-size: 15px;
+            outline: none;
+            box-sizing: border-box;
+        }
+        .search-box:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.12);
+        }
+        .search-info {
+            color: #555;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+        .file-item {
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #007bff;
+        }
+        .file-name {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+        }
+        .file-description {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        .download-btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .download-btn:hover {
+            background-color: #0056b3;
+        }
+        .download-btn:active {
+            transform: translateY(1px);
+        }
+        .empty-state {
+            text-align: center;
+            color: #666;
+            font-style: italic;
+        }
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📁 文件下载中心</h1>
+        
+        <div class="download-section">
+            <h2>可用下载文件</h2>
+            <input type="text" id="search-input" class="search-box" placeholder="搜索文件名..." aria-label="搜索文件名" />
+            <div class="search-info" id="search-info">共 1 个文件</div>
+            <ul class="file-list" id="file-list"></ul>
+            <p class="empty-state" id="empty-state">当前尚无可下载文件。请将文件放入本目录并更新页面。</p>
+        </div>
+        
+        <footer>
+            <p>© 2026 文件下载中心 | 将文件放到本目录即可公开下载</p>
+        </footer>
+    </div>
+
+    <script>
+        const files = [
+            {
+                name: "硬件检测-完整显示版.bat",
+                desc: "Windows硬件信息检测工具 - 完整版，支持CPU、显卡、内存、磁盘、主板、网络、操作系统、电池等全方位检测",
+                path: "硬件检测-完整显示版.bat"
+            }
+        ];
+
+        function renderFiles(filterText = '') {
+            const list = document.getElementById('file-list');
+            const empty = document.getElementById('empty-state');
+            const info = document.getElementById('search-info');
+
+            const filtered = files.filter(file => file.name.toLowerCase().includes(filterText.toLowerCase()));
+            info.textContent = `共 ${filtered.length} 个匹配结果`;
+
+            if (!filtered.length) {
+                list.innerHTML = '';
+                empty.textContent = filterText ? '未找到匹配的文件，请修改关键词。' : '当前尚无可下载文件。请将文件放入本目录并更新页面。';
+                empty.style.display = 'block';
+                return;
+            }
+
+            empty.style.display = 'none';
+            list.innerHTML = '';
+
+            filtered.forEach(file => {
+                const item = document.createElement('li');
+                item.className = 'file-item';
+                item.innerHTML = `
+                    <div class="file-name">${file.name}</div>
+                    <div class="file-description">${file.desc}</div>
+                    <a href="${file.path}" class="download-btn" download="${file.name}">下载</a>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            renderFiles();
+
+            const searchInput = document.getElementById('search-input');
+            searchInput.addEventListener('input', function() {
+                renderFiles(this.value.trim());
+            });
+
+            const container = document.querySelector('.container');
+            container.addEventListener('mouseover', function(event) {
+                if (event.target.classList.contains('download-btn')) {
+                    event.target.style.transform = 'scale(1.05)';
+                }
+            });
+            container.addEventListener('mouseout', function(event) {
+                if (event.target.classList.contains('download-btn')) {
+                    event.target.style.transform = 'scale(1)';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
