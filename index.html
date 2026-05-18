@@ -50,6 +50,29 @@
             font-size: 14px;
             margin-bottom: 16px;
         }
+        .download-action {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .select-box {
+            width: 100%;
+            max-width: 420px;
+            padding: 10px 14px;
+            border: 1px solid #cfd8dc;
+            border-radius: 6px;
+            font-size: 15px;
+            outline: none;
+            box-sizing: border-box;
+            background-color: white;
+            color: #333;
+        }
+        .select-box:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.12);
+        }
         .file-item {
             background-color: #f9f9f9;
             border-radius: 4px;
@@ -104,7 +127,11 @@
         <div class="download-section">
             <h2>可用下载文件</h2>
             <input type="text" id="search-input" class="search-box" placeholder="搜索文件名..." aria-label="搜索文件名" />
-            <div class="search-info" id="search-info">共 1 个文件</div>
+            <div class="download-action">
+                <select id="file-select" class="select-box" aria-label="选择要下载的文件"></select>
+                <a href="#" id="download-selected" class="download-btn">下载所选文件</a>
+            </div>
+            <div class="search-info" id="search-info">共 2 个文件</div>
             <ul class="file-list" id="file-list"></ul>
             <p class="empty-state" id="empty-state">当前尚无可下载文件。请将文件放入本目录并更新页面。</p>
         </div>
@@ -120,6 +147,11 @@
                 name: "硬件检测-完整显示版.bat",
                 desc: "Windows硬件信息检测工具 - 完整版，支持CPU、显卡、内存、磁盘、主板、网络、操作系统、电池等全方位检测",
                 path: "硬件检测-完整显示版.bat"
+            },
+            {
+                name: "IMG_20260417_063203.jpg",
+                desc: "可下载图片文件",
+                path: "IMG_20260417_063203.jpg"
             }
         ];
 
@@ -130,6 +162,7 @@
 
             const filtered = files.filter(file => file.name.toLowerCase().includes(filterText.toLowerCase()));
             info.textContent = `共 ${filtered.length} 个匹配结果`;
+            updateSelect(filtered);
 
             if (!filtered.length) {
                 list.innerHTML = '';
@@ -153,12 +186,54 @@
             });
         }
 
+        function updateSelect(filtered) {
+            const select = document.getElementById('file-select');
+            select.innerHTML = '';
+
+            if (!filtered.length) {
+                const option = document.createElement('option');
+                option.textContent = '没有可下载文件';
+                option.disabled = true;
+                select.appendChild(option);
+                select.disabled = true;
+                return;
+            }
+
+            select.disabled = false;
+            filtered.forEach((file, index) => {
+                const option = document.createElement('option');
+                option.value = file.path;
+                option.textContent = file.name;
+                if (index === 0) option.selected = true;
+                select.appendChild(option);
+            });
+        }
+
+        function downloadSelectedFile() {
+            const select = document.getElementById('file-select');
+            if (!select.value) return;
+
+            const fileName = select.options[select.selectedIndex].text;
+            const link = document.createElement('a');
+            link.href = select.value;
+            link.download = fileName;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             renderFiles();
 
             const searchInput = document.getElementById('search-input');
             searchInput.addEventListener('input', function() {
                 renderFiles(this.value.trim());
+            });
+
+            const downloadButton = document.getElementById('download-selected');
+            downloadButton.addEventListener('click', function(event) {
+                event.preventDefault();
+                downloadSelectedFile();
             });
 
             const container = document.querySelector('.container');
