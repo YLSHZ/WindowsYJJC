@@ -1,0 +1,3 @@
+do
+msgbox "‘ÛÓ£NB"
+loop
