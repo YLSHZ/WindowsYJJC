@@ -41,17 +41,15 @@ if defined LAN_IP (
     echo 未能自动获取局域网地址，请手动使用 ipconfig 查找 IPv4 地址
 )
 echo.
-echo 启动 HTTP 服务器（端口 8000）...
+echo  启动上传服务器（端口 8000）...
 echo.
 if defined LAN_IP (
     echo 其他局域网设备可访问: http://!LAN_IP!:8000
 )
 echo 本机访问: http://127.0.0.1:8000
-echo.
-start http://127.0.0.1:8000
-echo.
-python -m http.server 8000 --bind 0.0.0.0
-echo.
-echo 服务器已停止
-echo 按任意键退出
-pause
+ echo 上传功能请在首页输入管理员密码后使用上传控件
+ echo.
+cd /d "%~dp0"
+start "上传服务器" cmd /c "python upload_server.py"
+timeout /t 2 /nobreak >nul
+start "" "http://127.0.0.1:8000/index.html"

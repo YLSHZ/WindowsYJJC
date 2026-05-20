@@ -50,7 +50,9 @@
             font-size: 14px;
             margin-bottom: 16px;
         }
-        .download-action {
+        .auth-panel,
+        .download-action,
+        .upload-panel {
             display: flex;
             flex-wrap: wrap;
             gap: 10px;
@@ -69,9 +71,30 @@
             background-color: white;
             color: #333;
         }
-        .select-box:focus {
+        .select-box:focus,
+        .file-input:focus {
             border-color: #007bff;
             box-shadow: 0 0 0 3px rgba(0,123,255,0.12);
+        }
+        .file-input {
+            width: 100%;
+            max-width: 420px;
+            padding: 10px 14px;
+            border: 1px solid #cfd8dc;
+            border-radius: 6px;
+            font-size: 15px;
+            outline: none;
+            box-sizing: border-box;
+            background-color: white;
+            color: #333;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .upload-status {
+            width: 100%;
+            color: #333;
+            font-size: 14px;
         }
         .file-item {
             background-color: #f9f9f9;
@@ -126,6 +149,15 @@
         
         <div class="download-section">
             <h2>可用下载文件</h2>
+            <div class="auth-panel">
+                <input type="password" id="upload-password" class="search-box" placeholder="输入管理员密码以启用上传" aria-label="管理员密码" />
+                <button id="unlock-upload" class="download-btn" type="button">解锁上传</button>
+            </div>
+            <div class="upload-panel hidden" id="upload-panel">
+                <input type="file" id="upload-file" name="file" class="file-input" aria-label="选择文件上传" />
+                <button id="upload-button" class="download-btn" type="button">上传文件</button>
+                <div class="upload-status" id="upload-status"></div>
+            </div>
             <input type="text" id="search-input" class="search-box" placeholder="搜索文件名..." aria-label="搜索文件名" />
             <div class="download-action">
                 <select id="file-select" class="select-box" aria-label="选择要下载的文件"></select>
@@ -142,18 +174,53 @@
     </div>
 
     <script>
-        const files = [
+        const UPLOAD_PASSWORD = "admin123";
+
+        // 静态列举（作为回退）。已包含目录中除 index.html 以外的文件
+        let files = [
             {
                 name: "硬件检测-完整显示版.bat",
-                desc: "Windows硬件信息检测工具 - 完整版，支持CPU、显卡、内存、磁盘、主板、网络、操作系统、电池等全方位检测",
+                desc: "Windows硬件信息检测工具 - 完整显示",
                 path: "硬件检测-完整显示版.bat"
             },
             {
                 name: "IMG_20260417_063203.jpg",
-                desc: "可下载图片文件",
+                desc: "图片文件",
                 path: "IMG_20260417_063203.jpg"
+            },
+            {
+                name: "github.vbs",
+                desc: "辅助脚本",
+                path: "github.vbs"
+            },
+            {
+                name: "README.txt",
+                desc: "项目说明文件",
+                path: "README.txt"
+            },
+            {
+                name: "start_server.bat",
+                desc: "启动本地服务器脚本",
+                path: "start_server.bat"
             }
         ];
+
+        // 尝试从服务器目录索引动态加载文件（适用于 python -m http.server 等会生成目录列表的服务器）
+        async function loadFilesFromServer() {
+            try {
+                const res = await fetch('/files.json');
+                if (!res.ok) return;
+                const serverFiles = await res.json();
+
+                // 合并并去重（以 path 为准）
+                const map = new Map();
+                files.concat(serverFiles).forEach(f => map.set(decodeURIComponent(f.path), f));
+                files = Array.from(map.values());
+            } catch (e) {
+                // 忽略加载错误，保持静态列表
+                console.warn('无法从服务器加载目录索引：', e);
+            }
+        }
 
         function renderFiles(filterText = '') {
             const list = document.getElementById('file-list');
@@ -222,7 +289,64 @@
             document.body.removeChild(link);
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
+        function unlockUpload() {
+            const passwordInput = document.getElementById('upload-password');
+            const uploadPanel = document.getElementById('upload-panel');
+            const status = document.getElementById('upload-status');
+            if (passwordInput.value === UPLOAD_PASSWORD) {
+                uploadPanel.classList.remove('hidden');
+                status.textContent = '已解锁上传，请选择文件并点击上传。';
+                status.style.color = '#1a73e8';
+            } else {
+                uploadPanel.classList.add('hidden');
+                status.textContent = '密码错误，请重新输入。';
+                status.style.color = '#d93025';
+            }
+        }
+
+        async function uploadFile() {
+            const passwordInput = document.getElementById('upload-password');
+            const fileInput = document.getElementById('upload-file');
+            const status = document.getElementById('upload-status');
+
+            if (!fileInput.files.length) {
+                status.textContent = '请先选择一个文件再上传。';
+                status.style.color = '#d93025';
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const formData = new FormData();
+            formData.append('password', passwordInput.value);
+            formData.append('file', file);
+
+            status.textContent = '正在上传...';
+            status.style.color = '#333';
+
+            try {
+                const response = await fetch('/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                const text = await response.text();
+                if (!response.ok) {
+                    status.textContent = '上传失败，请检查密码或文件。';
+                    status.style.color = '#d93025';
+                    return;
+                }
+                status.innerHTML = '上传成功。页面将在几秒后刷新文件列表。';
+                status.style.color = '#1a73e8';
+                await loadFilesFromServer();
+                renderFiles(document.getElementById('search-input').value.trim());
+            } catch (error) {
+                status.textContent = '上传失败：' + error;
+                status.style.color = '#d93025';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', async function() {
+            // 先尝试从服务器加载目录文件，再渲染页面
+            await loadFilesFromServer();
             renderFiles();
 
             const searchInput = document.getElementById('search-input');
@@ -234,6 +358,16 @@
             downloadButton.addEventListener('click', function(event) {
                 event.preventDefault();
                 downloadSelectedFile();
+            });
+
+            const unlockButton = document.getElementById('unlock-upload');
+            unlockButton.addEventListener('click', function() {
+                unlockUpload();
+            });
+
+            const uploadButton = document.getElementById('upload-button');
+            uploadButton.addEventListener('click', function() {
+                uploadFile();
             });
 
             const container = document.querySelector('.container');
